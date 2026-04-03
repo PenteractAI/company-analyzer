@@ -2,6 +2,7 @@ import requests
 import streamlit as st
 from bs4 import BeautifulSoup
 from ollama import chat, ChatResponse
+from datetime import datetime
 
 MODEL_NAME = "qwen3.5:cloud"
 
@@ -48,12 +49,14 @@ if submit:
         )
 
         # Gives instructions to the LLM to compute the alignment between the user's resume and the startup
+        now = datetime.now()
+        formatted_date = now.strftime("%A, %B %d, %Y")
         chat_response: ChatResponse = chat(
             model=MODEL_NAME,
             messages=[
                 {
                     'role': 'system',
-                    'content': "Tu es un assistant pour la recherche d'emploi de l'utilisateur. L'utilisateur va te donner le résumé de l'offre d'une startup, et tu vas devoir calculer l'alignement de cette startup avec mon CV. Le résultat sera un nombre entre 0 et 1."
+                    'content': f"Date du jour: {formatted_date}. Tu es un assistant pour la recherche d'emploi de l'utilisateur. L'utilisateur va te donner le résumé de l'offre d'une startup, et tu vas devoir calculer l'alignement de cette startup avec mon CV. Le résultat sera un nombre entre 0 et 1."
                 },
                 {
                     'role': 'user',
