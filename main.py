@@ -1,10 +1,10 @@
 import requests
+import prompts
 import streamlit as st
-from bs4 import BeautifulSoup
-from ollama import chat, ChatResponse
-from datetime import datetime
+import json
 
-MODEL_NAME = "qwen3.5:cloud"
+from bs4 import BeautifulSoup
+
 
 with open("data/cv.txt") as f:
     cv = f.read()
@@ -13,60 +13,60 @@ st.title("Startup Analyzer")
 st.caption("Mettez le lien du site web de la startup et appuyez sur 'Envoyer' !")
 
 with st.form("website_analyzer"):
+
     website_url = st.text_input("Website URL")
     submit = st.form_submit_button("Envoyer")
 
 if submit:
+
     response = requests.get(website_url)
 
     # Web scraping
+
     if response.status_code != 200:
         st.error(f"Erreur lors de la requête : {response.status_code}")
-    else:
-        soup = BeautifulSoup(response.text, 'html.parser')
+        st.stop()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    website_text = soup.get_text()
+
+    # Summarize the startup in 3 dimensions to enable CV matching later
+    startup_summary_json = prompts.get_summary(website_text)
+
+    if not startup_summary_json:
+        st.error(f"Le résumé n'a pas pu être généré.")
+        st.stop()
+
+    startup_summary_md = f"""
+        ## Offre
+        {startup_summary_json['offer']} 
         
-        # Summarize the startup in 3 dimensions to enable CV matching later
-        chat_response: ChatResponse = chat(
-            model=MODEL_NAME,
-            messages=[
-                {
-                    'role': 'system',
-                    'content': "Tu es un assistant pour la recherche d'emploi de l'utilisateur. L'utilisateur va te donner le contenu de la page web d'une entreprise, et tu vas devoir extraires ces 3 informations de manière claire et concise : l'offre concrète de l'entreprise, les utilisateurs cibles, et la stack technique probable de leur offre."
-                },
-                {
-                    'role': 'user',
-                    'content': soup.get_text()
-                }
-            ]
-        )
+        ## Utilisateurs cibles 
+        {startup_summary_json['target_users']}
+        
+        ## Stack technique
+        {startup_summary_json['tech_stack']}
+    """
 
-        startup_summary = chat_response.message.content
-        st.markdown(startup_summary)
+    st.markdown(startup_summary_md)
 
-        alignment_request = (
-            f"# STARTUP OFFER:\n{startup_summary}\n"
-            f"# USER'S RESUME:\n{cv}"
-        )
+    # Gives instructions to the LLM to compute the alignment between the user's resume and the startup
+    matching_score = prompts.get_resume_matching_score(
+        website_summary=json.dumps(startup_summary_json), resume_text=cv
+    )
 
-        # Gives instructions to the LLM to compute the alignment between the user's resume and the startup
-        now = datetime.now()
-        formatted_date = now.strftime("%A, %B %d, %Y")
-        chat_response: ChatResponse = chat(
-            model=MODEL_NAME,
-            messages=[
-                {
-                    'role': 'system',
-                    'content': f"Date du jour: {formatted_date}. Tu es un assistant pour la recherche d'emploi de l'utilisateur. L'utilisateur va te donner le résumé de l'offre d'une startup, et tu vas devoir calculer l'alignement de cette startup avec mon CV. Le résultat sera un nombre entre 0 et 1."
-                },
-                {
-                    'role': 'user',
-                    'content': alignment_request
-                }
-            ]
-        )
+    if not matching_score:
+        st.error(f"Le score d'alignement n'a pas pu être calculé.")
+        st.stop()
 
-        # Display the answer as markdown for debugging
-        st.markdown("# Alignement")
+    # Display the answer as markdown for debugging
+    st.markdown(
+        f"""
+            # Alignement
+            ## Score
+            {matching_score['score']}
 
-        alignment_score = chat_response.message.content
-        st.markdown(alignment_score)
+            ## Justification
+            {matching_score['justification']}
+        """
+    )
