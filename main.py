@@ -2,9 +2,20 @@ import requests
 import prompts
 import streamlit as st
 import json
+import pandas as pd
 
+from pathlib import Path
 from bs4 import BeautifulSoup
 
+companies_file_name = "data/companies.json"
+file_path = Path(companies_file_name)
+
+if not file_path.exists():
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump([], file, indent=4)
+
+with open(file_path, "r", encoding="utf-8") as file:
+    companies = json.load(file)
 
 with open("data/cv.txt") as f:
     cv = f.read()
@@ -70,3 +81,14 @@ if submit:
             {matching_score['justification']}
         """
     )
+
+    startup_summary_json["alignment"] = matching_score
+    startup_summary_json["website"] = website_url
+    companies.append(startup_summary_json)
+
+    with open(companies_file_name, "w") as f:
+        json.dump(companies, f, indent=4)
+
+# Display the companies dataframe
+companies_df = pd.json_normalize(companies)
+st.dataframe(companies_df, use_container_width=True)
