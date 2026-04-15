@@ -1,18 +1,19 @@
 from datetime import datetime
-
 from ollama import chat, ChatResponse
+from prompt_loader import load_prompt
 import json
 
 MODEL_NAME = "qwen3.5:cloud"
-SYSTEM_INSTRUCTIONS = "You are a helpful assistant designed to extract information into JSON to help the user with its job seeking. You will answer in French."
 
+def get_current_date():
+    return datetime.now().strftime("%A, %B %d, %Y")
 
-def generate_json_response(text_content: str) -> dict | None:
+def generate_json_response(prompt: str) -> dict | None:
     response: ChatResponse = chat(
         model=MODEL_NAME,
         messages=[
-            {"role": "system", "content": SYSTEM_INSTRUCTIONS},
-            {"role": "user", "content": text_content},
+            {"role": "system", "content": prompt["system"]},
+            {"role": "user", "content": prompt["user"]},
         ],
     )
 
@@ -24,41 +25,17 @@ def generate_json_response(text_content: str) -> dict | None:
         return None
 
 
-def get_summary(website_text: str) -> dict | None:
+def get_summary(website_content: str) -> dict | None:
 
-    text_content = f"""
-        Extrait ces 3 informations de manière claire et concise : l'offre concrète de l'entreprise, les utilisateurs cibles, et la stack technique probable de leur offre.
-        Texte : "{website_text}"
-        Format JSON attendu : 
-        {{
-            "offer": "string",
-            "target_users": "string",
-            "tech_stack": "string"
-        }}
-    """
+    prompt = load_prompt("summary", website_content=website_content, current_date=get_current_date())
 
-    json_response = generate_json_response(text_content)
+    json_response = generate_json_response(prompt)
     return json_response
 
 
-def get_resume_matching_score(website_summary: str, resume_text: str) -> dict | None:
+def get_resume_matching_score(company_summary: str, user_resume: str) -> dict | None:
 
-    now = datetime.now()
+    prompt = load_prompt("matching_score", company_summary=company_summary, user_resume=user_resume, current_date=get_current_date())
 
-    formatted_date = now.strftime("%A, %B %d, %Y")
-
-    text_content = f"""
-        L'utilisateur va te donner le résumé de l'offre d'une startup, et tu vas devoir calculer l'alignement de cette startup avec mon CV. 
-        Le résultat sera un nombre entre 0 et 1.
-        Date du jour: {formatted_date}. 
-        Résumé de l'entreprise : "{website_summary}"
-        CV : "{resume_text}"
-        Format JSON attendu :
-        {{
-            "score": "float between 0 and 1",
-            "justification": "string"
-        }}
-    """
-
-    json_response = generate_json_response(text_content)
+    json_response = generate_json_response(prompt)
     return json_response

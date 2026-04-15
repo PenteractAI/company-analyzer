@@ -39,10 +39,10 @@ if submit:
         st.stop()
 
     soup = BeautifulSoup(response.text, "html.parser")
-    website_text = soup.get_text()
+    website_content = soup.get_text()
 
     # Summarize the startup in 3 dimensions to enable CV matching later
-    startup_summary_json = prompts.get_summary(website_text)
+    startup_summary_json = prompts.get_summary(website_content)
 
     if not startup_summary_json:
         st.error(f"Le résumé n'a pas pu être généré.")
@@ -63,7 +63,7 @@ if submit:
 
     # Gives instructions to the LLM to compute the alignment between the user's resume and the startup
     matching_score = prompts.get_resume_matching_score(
-        website_summary=json.dumps(startup_summary_json), resume_text=cv
+        company_summary=json.dumps(startup_summary_json), user_resume=cv
     )
 
     if not matching_score:
@@ -77,8 +77,8 @@ if submit:
             ## Score
             {matching_score['score']}
 
-            ## Justification
-            {matching_score['justification']}
+            ## Reasoning
+            {matching_score['reasoning']}
         """
     )
 

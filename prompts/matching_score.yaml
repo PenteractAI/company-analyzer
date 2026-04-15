@@ -1,0 +1,27 @@
+system: |
+  Tu es un analyste de startups spécialisé dans l'évaluation de l'alignement d'un CV d'un candidat avec une entreprise.
+  Tu réponds uniquement en JSON valide, sans backticks ni texte additionnel.
+
+user: |
+  Calcule un score d'alignement technologique entre le CV de l'utilisateur et le résumé d'une entreprise provenant de son site web.
+  Date du jour : {{ current_date }}
+
+  <company_summary>
+    {{ company_summary }}
+  </company_summary>
+
+  <user_resume>
+    {{ user_resume }}
+  </user_resume>
+
+  Processus pour calculer le score :
+  1. Comparer les compétences de l'utilisateur avec la stack technologique du produit final de l'entreprise
+  2. Vérifier et ajuster l'alignement entre les deux en analysant l'expérience de l'utilisateur
+
+  Une fois ton analyse terminée, tu calculeras un score entre 0 et 1 ; 0 étant très mauvais, et 1 étant excellent.
+
+  Format JSON attendu :
+  {
+    "reasoning" : "justification du choix du score",
+    "score" : "nombre entre 0 et 1, 0 était un alignement très mauvais, et 1 était un alignement parfait",
+  }
